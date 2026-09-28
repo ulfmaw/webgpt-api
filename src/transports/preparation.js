@@ -31,14 +31,14 @@ export function observePreparation(connection, { now = Date.now } = {}) {
   return {
     modelVersion: () => modelVersion,
     ready: () => completed && !rejected && !pending.size && now() - lastActivity >= 1000,
-    async wait(signal) {
+    async wait(signal, { attachments = true } = {}) {
       const deadline = now() + 20_000;
       while (now() < deadline) {
         signal.throwIfAborted();
         if (this.ready()) return;
         await delay(100, undefined, { signal });
       }
-      throw new Fault(503, "attachment_model_not_ready", "The website has not finished preparing its model. No files were uploaded or message sent.");
+      throw new Fault(503, attachments ? "attachment_model_not_ready" : "model_not_ready", "The website has not finished preparing its model. No message was sent.");
     },
     dispose: () => { for (const cleanup of cleanups) cleanup(); },
   };

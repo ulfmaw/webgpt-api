@@ -46,8 +46,10 @@ export async function generationStream(connection, request, signal) {
   let received = 0;
   let submitted = false;
   const disposers = [];
-  const preparation = request.attachments?.length ? observePreparation(connection) : null;
-  if (preparation) disposers.push(preparation.dispose);
+  // The composer can render before its model preparation finishes, including
+  // text-only turns. A clickable button alone does not establish readiness.
+  const preparation = observePreparation(connection);
+  disposers.push(preparation.dispose);
   const cleanup = () => { for (const dispose of disposers) dispose(); signal.removeEventListener("abort", abort); };
   const fail = error => { if (!ended) { ended = true; streamController.error(error); cleanup(); } };
   const abort = () => fail(signal.reason ?? new Error("Cancelled"));
@@ -130,7 +132,7 @@ export async function generationStream(connection, request, signal) {
     const latest = request.messages.at(-1);
     if (latest?.role !== "user") throw new Fault(400, "user_turn_required", "The last message must be a user turn.");
     await connection.call("Input.insertText", { text: latest.content });
-    if (preparation) await preparation.wait(signal);
+    await preparation.wait(signal, { attachments: Boolean(request.attachments?.length) });
     const attachmentModelVersion = preparation?.modelVersion();
     // File-input selections can be read lazily at Send time. Retain the private
     // files until generation completes or is cancelled, not just until a tile appears.

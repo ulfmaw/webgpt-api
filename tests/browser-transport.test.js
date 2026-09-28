@@ -42,3 +42,26 @@ test("generation without a login fails before opening any browser", async () => 
     assert.equal(opened, 0);
   } finally { rmSync(temp, { recursive: true, force: true }); }
 });
+
+test("text-only composer never clicks before model preparation completes", async () => {
+  const abort = new AbortController();
+  let inserted = false, clicked = false;
+  const listeners = new Map();
+  const connection = {
+    on(name, fn) { listeners.set(name, fn); return () => listeners.delete(name); },
+    async call(method, params) {
+      if (method === "Input.insertText") {
+        inserted = true;
+        setTimeout(() => abort.abort(new Error("preparation_pending")), 20);
+      }
+      if (method === "Runtime.evaluate" && params.expression.includes("b.click()")) clicked = true;
+      return { result: { value: true } };
+    },
+  };
+  await assert.rejects(generationStream(connection, {
+    model: "auto", messages: [{ role: "user", content: "hi" }],
+  }, abort.signal));
+  assert.equal(inserted, true);
+  assert.equal(clicked, false);
+  assert.equal(listeners.size, 0);
+});
