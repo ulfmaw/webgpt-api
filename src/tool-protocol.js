@@ -63,7 +63,13 @@ export function toolPrompt(input,instructions,protocol,format){
 }
 export function decodeToolReply(text,protocol,format){
   let value;
-  try{value=JSON.parse(text.trim());}catch{throw new Fault(502,"invalid_tool_response","The website did not return valid tool-protocol JSON. No tool was dispatched.");}
+  try{
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+    const jsonText = jsonMatch ? jsonMatch[1] : text;
+    const cleanText = jsonText.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    const finalJsonMatch = cleanText.match(/\{[\s\S]*\}/);
+    value=JSON.parse(finalJsonMatch ? finalJsonMatch[0] : cleanText);
+  }catch{throw new Fault(502,"invalid_tool_response","The website did not return valid tool-protocol JSON. No tool was dispatched.");}
   const fail=()=>{throw new Fault(502,"invalid_tool_response","The website returned an invalid or unauthorized function request. No tool was dispatched.");};
   if(!value||typeof value!=="object"||Array.isArray(value)||Object.keys(value).some(k=>!["reply","actions"].includes(k))||!Array.isArray(value.actions)||!(value.reply===null||typeof value.reply==="string"))fail();
   if(value.actions.length){
@@ -85,4 +91,5 @@ export function decodeToolReply(text,protocol,format){
   }
   return{text:value.reply,items:[]};
 }
+
 
