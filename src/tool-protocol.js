@@ -7,8 +7,7 @@ export function normalizeTools(body,chat=false){
   if(body.tools!==undefined&&!Array.isArray(body.tools))bad("tools must be an array.");
   if((body.tools?.length??0)>128)bad("At most 128 functions are supported.");
   const seen=new Set();
-  const tools=(body.tools??[]).map(tool=>{
-    if(tool?.type!=="function")throw new Fault(400,"unsupported_tool","Only client-executed function tools are currently supported.");
+  const tools=(body.tools??[]).filter(tool => tool?.type === "function").map(tool=>{
     const f=chat?tool.function:tool;
     if(!f||!namePattern.test(f.name)||seen.has(f.name))bad("Function names must be valid and unique.");seen.add(f.name);
     if(f.description!==undefined&&typeof f.description!=="string")bad("Tool descriptions must be strings.");

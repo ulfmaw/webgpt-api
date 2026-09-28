@@ -38,6 +38,8 @@ hooks = false
 apps = false
 remote_plugin = false
 multi_agent = false
+plugins = false
+shell_tool = false
 
 [model_providers.webgpt_local]
 name = "webgpt-api"
