@@ -36,7 +36,9 @@ test("only loopback is bound; all model routes require key and reject browser-or
     req.on("error", reject); req.end();
   });
   assert.equal(status, 403);
-  assert.equal((await (await request("/v1/models")).json()).data[0].id, "test-model");
+  const modelList = await (await request("/v1/models")).json();
+  assert.equal(modelList.data[0].id, "test-model");
+  assert.equal(modelList.models[0].id, "test-model");
   assert.equal((await (await request("/v1/models/test-model")).json()).id, "test-model");
   assert.equal((await request("/v1/models/missing")).status, 404);
 });

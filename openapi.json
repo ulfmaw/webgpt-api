@@ -23,10 +23,11 @@
           "200": {
             "description": "Account-advertised models.",
             "content": { "application/json": { "schema": {
-              "type": "object", "required": ["object", "data"],
+              "type": "object", "required": ["object", "data", "models"],
               "properties": {
                 "object": { "const": "list" },
-                "data": { "type": "array", "items": { "type": "object", "required": ["id", "object"], "properties": { "id": { "type": "string" }, "object": { "const": "model" } } } }
+                "data": { "type": "array", "items": { "type": "object", "required": ["id", "object"], "properties": { "id": { "type": "string" }, "object": { "const": "model" } } } },
+                "models": { "type": "array", "items": { "type": "object", "required": ["id", "object"], "properties": { "id": { "type": "string" }, "object": { "const": "model" } } } }
               }
             } } }
           },

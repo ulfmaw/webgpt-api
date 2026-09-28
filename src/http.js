@@ -120,7 +120,9 @@ export function createLocalServer({ engine, key, selection, control = {} }) {
       if (!authorized(req.headers.authorization, key)) throw new Fault(401, "invalid_api_key", "A valid local API key is required.");
       if (url.pathname === "/v1/models" && req.method === "GET") {
         const models = await engine.catalog.list();
-        json(200, { object: "list", data: models.map(m => ({ id: m.id, object: "model", created: 0, owned_by: "account" })) });
+        const entries = models.map(m => ({ id: m.id, object: "model", created: 0, owned_by: "account" }));
+        // Keep the standard OpenAI `data` field and add Codex CLI's expected alias.
+        json(200, { object: "list", data: entries, models: entries });
         return;
       }
       const modelRoute = /^\/v1\/models\/([^/]+)$/.exec(url.pathname);
