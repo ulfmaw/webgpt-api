@@ -1,90 +1,79 @@
 # webgpt-api
 
-把 ChatGPT 網頁版的 Chat 模式，包裝成一個只在本機監聽的 OpenAI 相容 API。
+把 ChatGPT 网页版的 Chat 模式，包装成一个只在本地监听的 OpenAI 兼容 API。
 
-`webgpt-api` 是一個本機轉接層：它接收既有 OpenAI 介面的請求，使用你本人
-登入的 ChatGPT 帳號完成生成，再把結果轉回 `Responses` 或 `Chat Completions`
-格式。這讓 Codex CLI、Claude Code、OpenCode 等工具可以沿用原本的客戶端
-設定，同時使用 Chat 網頁端實際提供給該帳號的模型與權限。
+`webgpt-api` 是一个本地转接层：它接收既有 OpenAI 接口的请求，使用你本人登录的 ChatGPT 账号完成生成，再把结果转回 `Responses` 或 `Chat Completions` 格式。这让 Codex CLI、Claude Code、OpenCode 等工具可以沿用原本的客户端设置，同时使用 Chat 网页端实际提供给该账号的模型与权限。
 
-請求路徑很直接：
+请求路径很直接：
 
 ```text
-OpenAI 相容客戶端
-        │  127.0.0.1 + 本機 API 金鑰
+OpenAI 兼容客户端
+        │  127.0.0.1 + 本地 API 密钥
         ▼
 webgpt-api gateway
-        │  隔離的專用瀏覽器工作階段
+        │  隔离的专用浏览器工作阶段
         ▼
-ChatGPT 網頁版 Chat
+ChatGPT 网页版 Chat
 ```
 
-它不是官方 OpenAI API、遠端代理或代管服務。服務只綁定 loopback；登入狀態、
-本機金鑰、對話資料與專用瀏覽器設定檔留在你的電腦上。ChatGPT 網頁協定不是
-穩定的公開 API，因此可用模型、登入狀態與部分功能會隨帳號、瀏覽器和網站
-變更而變化。
+它不是官方 OpenAI API、远程代理或代管服务。服务只绑定 loopback；登录状态、本地密钥、对话数据与专用浏览器配置文件留在你的电脑上。ChatGPT 网页协议不是稳定的公开 API，因此可用模型、登录状态与部分功能会随账号、浏览器和网站变更而变化。
 
-## 設計取向
+## 设计取向
 
-- **保持 Chat 的原生選擇。** 模型清單來自帳號自己的 Chat 選單；`auto` 會原樣交給上游，不自行假定某個固定模型。
-- **本機邊界清楚。** 生成 API 只接受本機連線與本機金鑰，不開放公網、不建立隧道，也不接管日常瀏覽器。
-- **失敗不被掩蓋。** 網站回覆未完成、模型被替換、登入或協定驗證失敗時，閘道會回報錯誤，不把半截內容當成成功，也不靜默改用另一個模型。
-- **相容性有明確範圍。** 目前涵蓋文字、多輪上下文、JSON／SSE、函式工具協定，以及部分附件輸入；詳細邊界與未驗證項目列在文件中。
+- **保持 Chat 的原生选择。** 模型列表来自账号自己的 Chat 菜单；`auto` 会原样交给上游，不自行假定某个固定模型。
+- **本地边界清楚。** 生成 API 只接受本地连接与本地密钥，不开放公网、不建立隧道，也不接管日常浏览器。
+- **失败不被掩盖。** 网站回复未完成、模型被替换、登录或协议验证失败时，网关会回报错误，不把半截内容当成成功，也不静默改用另一个模型。
+- **兼容性有明确范围。** 目前涵盖文本、多轮上下文、JSON／SSE、函数工具协议，以及部分附件输入；详细边界与未验证项目列在文档中。
 
-## 核心定位與推薦工作流：腦手分離 (Planner-Worker)
+## 核心定位与推荐工作流 (Planner-Worker)
 
-`webgpt-api` 最強大的使用情境，是作為 AI 開發流程中的**「手腳 (Worker)」**，用來大幅減輕官方付費 API 的帳單負擔。
+`webgpt-api` 最强大的使用情境，是作为 AI 开发流程中的**“执行节点 (Worker)”**，用以大幅减轻官方付费 API 的账单负担。
 
-建議在使用本專案時，採用以下「腦手分離」的架構：
+建议在使用本项目时，采用以下“脑手分离 (Planner-Worker)”的架构：
 
-1. 🧠 **大腦（使用官方付費 API）：負責「看大局與計畫」**
-   - 當你需要讓 AI 讀取整個專案（例如幾十個檔案）、分析複雜架構或規劃重構步驟時，請使用官方 API。
-   - 官方 API 擁有超大的上下文視窗且純資料傳輸極度穩定，不會因為載入大量字元而卡頓。
+1. 🧠 **大脑（使用官方付费 API）：负责“看大局与计划”**
+   - 当你需要让 AI 读取整个项目（例如几十个文件）、分析复杂架构或规划重构步骤时，请使用官方 API。
+   - 官方 API 拥有超大的上下文窗口且纯数据传输极度稳定，不会因为载入大量字符而卡顿。
 
-2. 💪 **手腳（使用 `webgpt-api`）：負責「執行與除錯」**
-   - 當大腦產出「修改清單」後，把模型切換為 `webgpt-api`（消耗網頁版免費或 Plus 額度）。
-   - 讓 `webgpt-api` 負責具體的單一檔案修改、編寫測試、或無窮迴圈式的 Debug。
-   - 寫程式與反覆除錯是**最消耗 Token 的環節**。只要任務限縮在少量檔案，就不會觸發網頁版的當機極限；你可以無壓力地使喚當前最新的高階模型，把最昂貴的代價轉嫁到網頁版額度上。
+2. 💪 **执行者（使用 `webgpt-api`）：负责“具体修改与调试”**
+   - 当大脑产出“修改清单”后，将模型切换为 `webgpt-api`（消耗网页版免费或 Plus 额度）。
+   - 让 `webgpt-api` 负责具体的单一文件修改、编写测试、或重复的 Debug 循环。
+   - 编写代码与反复调试是**最消耗 Token 的环节**。只要任务限缩在少量文件，就不会触发网页版前端的性能极限；你可以无压力地调用当前最新的高阶模型，将最昂贵的调试成本转移至网页版额度上。
 
-⚠️ **注意：請避免讓 `webgpt-api` 一次讀取整個大專案。** 由於底層是自動化瀏覽器，一口氣塞入數 MB 的原始碼會導致網頁前端卡死並引發「超時斷線」。**精準打擊、一次修改一個元件**，才是發揮它最大價值的正確用法。
+⚠️ **注意：请避免让 `webgpt-api` 一次读取整个大项目。** 由于底层是自动化浏览器，一口气塞入数 MB 的源代码会导致网页前端卡死并引发“超时断线”。**精准指定、一次修改一个组件**，才是发挥本项目最大价值的正确用法。
 
-## 快速開始（Windows）
+## 快速开始（Windows）
 
-1. 下載或 clone 這個 repository。
-2. 雙擊 `start.cmd`。
-3. 在專用登入視窗完成你自己的 ChatGPT 登入與必要驗證。
-4. 在任何支援自訂 OpenAI Base URL 的工具裡，填入下方三個欄位即可。
-5. 命令列工具也可以直接雙擊 `webgpt.cmd 工具名`，省掉複製貼上。
+1. 下载或 clone 这个仓库。
+2. 双击 `start.cmd`。
+3. 在专用登录窗口完成你自己的 ChatGPT 登录与必要验证。
+4. 在任何支持自定义 OpenAI Base URL 的工具里，填入下方三个字段即可。
+5. 命令行工具也可以直接双击 `webgpt.cmd 工具名`，省掉复制粘贴。
 
-預設網址：
+默认网址：
 
-- 控制頁：`http://127.0.0.1:17840/`
-- API 根目錄：`http://127.0.0.1:17841/v1`
+- 控制页：`http://127.0.0.1:17840/`
+- API 根目录：`http://127.0.0.1:17841/v1`
 
-服務只綁定本機。`node src/cli.js key` 可以在命令列取得本機 API 金鑰；這個
-金鑰不是 ChatGPT 憑證，也不會被轉送給 ChatGPT。
+服务只绑定本地。`node src/cli.js key` 可以在命令行取得本地 API 密钥；这个密钥不是 ChatGPT 凭证，也不会被转发给 ChatGPT。
 
-## 標準 OpenAI 相容接入
+## 标准 OpenAI 兼容接入
 
-這個專案對使用者就是一個本機 OpenAI API。啟動並登入後，在工具的
-`OpenAI API`、`Custom Provider` 或 `OpenAI-compatible` 設定中填入：
+这个项目对用户就是一个本地 OpenAI API。启动并登录后，在工具的 `OpenAI API`、`Custom Provider` 或 `OpenAI-compatible` 设置中填入：
 
 ```text
 Base URL: http://127.0.0.1:17841/v1
-API Key:  控制頁的「本機 API Key」
+API Key:  控制页的“本地 API Key”
 Model:    auto
 ```
 
-不需要填 ChatGPT 帳號密碼，也不需要申請或購買 OpenAI API key。這個 Base URL
-同時支援 Responses API 與 Chat Completions API；工具選哪一種協定，照工具原本
-的預設即可。模型填 `auto` 會使用帳號目前可用的 Chat 模型。
+不需要填 ChatGPT 账号密码，也不需要申请或购买 OpenAI API key。这个 Base URL 同时支持 Responses API 与 Chat Completions API；工具选哪一种协议，照工具原本的默认即可。模型填 `auto` 会使用账号目前可用的 Chat 模型。
 
-只要工具允許自訂 Base URL，它就能直接接入；若工具把 API 網址硬編碼成官方
-服務、完全不支援自訂 provider，就不能只靠 API 端改變它的限制。
+只要工具允许自定义 Base URL，它就能直接接入；若工具把 API 网址硬编码成官方服务、完全不支持自定义 provider，就不能只靠 API 端改变它的限制。
 
-## 一般使用者怎麼接入
+## 一般用户如何接入
 
-最省事的方式是不碰 Key，也不改任何第三方設定檔：
+最省事的方式是不碰 Key，也不改任何第三方配置文件：
 
 ```bat
 webgpt.cmd codex
@@ -92,25 +81,19 @@ webgpt.cmd opencode
 webgpt.cmd 你的工具名
 ```
 
-這個啟動器只把設定傳給該次啟動的工具，不寫入全域環境變數。它會提供
-`OPENAI_BASE_URL`、`OPENAI_API_BASE`、`OPENAI_API_KEY`、`OPENAI_MODEL` 及
-`WEBGPT_API_*` 變數；工具本身仍須支援 OpenAI 相容 API。Codex 會自動建立並
-使用 `webgpt-api` profile，不需要使用者手動編輯 `config.toml`。
+这个启动器只把设置传给该次启动的工具，不写入全局环境变量。它会提供 `OPENAI_BASE_URL`、`OPENAI_API_BASE`、`OPENAI_API_KEY`、`OPENAI_MODEL` 及 `WEBGPT_API_*` 变量；工具本身仍须支持 OpenAI 兼容 API。Codex 会自动建立并使用 `webgpt-api` profile，不需要用户手动编辑 `config.toml`。
 
-若只雙擊 `webgpt.cmd` 而不帶工具名，會開一個已準備好的終端；在裡面啟動的
-相容工具會繼承同一組設定。
+若只双击 `webgpt.cmd` 而不带工具名，会开一个已准备好的终端；在里面启动的兼容工具会继承同一组设置。
 
-啟動服務並完成登入後，從控制頁複製 API 位址和本機金鑰。對支援 OpenAI 相容
-API 的工具，填入：
+启动服务并完成登录后，从控制页复制 API 地址和本地密钥。对支持 OpenAI 兼容 API 的工具，填入：
 
 ```text
 Base URL: http://127.0.0.1:17841/v1
-API Key:  控制頁顯示的本機 API 金鑰
+API Key:  控制页显示的本地 API 密钥
 Model:    auto
 ```
 
-API 金鑰只用來保護你電腦上的 loopback 服務，不是 ChatGPT 的登入憑證。最小
-的 HTTP 請求如下：
+API 密钥只用来保护你电脑上的 loopback 服务，不是 ChatGPT 的登录凭证。最小的 HTTP 请求如下：
 
 ```powershell
 $key = (node src/cli.js key).Trim()
@@ -123,7 +106,7 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-也可以直接使用官方 OpenAI SDK，只替換 Base URL 和 API Key：
+也可以直接使用官方 OpenAI SDK，只替换 Base URL 和 API Key：
 
 ```javascript
 import OpenAI from "openai";
@@ -141,10 +124,9 @@ const response = await client.responses.create({
 console.log(response.output_text);
 ```
 
-Codex CLI、Claude Code、OpenCode 等工具則使用同一組 Base URL、API Key 和
-模型設定；各工具自己的工具執行、權限與沙箱政策仍然照原本規則運作。
+Codex CLI、Claude Code、OpenCode 等工具则使用同一组 Base URL、API Key 和模型设置；各工具自己的工具执行、权限与沙盒政策仍然照原本规则运行。
 
-## 命令列啟動
+## 命令行启动
 
 需要 Node.js 24.14 或更新版本：
 
@@ -155,28 +137,27 @@ node src/cli.js setup
 node src/cli.js serve
 ```
 
-若已有本機登入資料，也可以使用 `node src/cli.js init`。命令列登入則是
-`node src/cli.js login`；一般使用者建議直接使用 `start.cmd` 的控制頁。
+若已有本地登录数据，也可以使用 `node src/cli.js init`。命令行登录则是 `node src/cli.js login`；一般用户建议直接使用 `start.cmd` 的控制页。
 
-## API 範圍
+## API 范围
 
-| 路徑 | 用途 |
+| 路径 | 用途 |
 | --- | --- |
-| `GET /healthz` | 本機程序狀態；不代表帳號或模型一定可用 |
-| `GET /v1/models` | 讀取帳號目前可用的 Chat 模型清單 |
-| `POST /v1/models/refresh` | 清除模型清單快取並重新取得 |
-| `POST /v1/responses` | Responses API 風格的文字、多輪、工具、JSON／SSE 請求 |
-| `POST /v1/chat/completions` | Chat Completions API 風格的文字、工具、JSON／SSE 請求 |
-| `GET /v1/responses/{id}` | 讀取本機保存的已完成回覆 |
-| `DELETE /v1/responses/{id}` | 刪除本機保存的回覆 |
+| `GET /healthz` | 本地程序状态；不代表账号或模型一定可用 |
+| `GET /v1/models` | 读取账号目前可用的 Chat 模型列表 |
+| `POST /v1/models/refresh` | 清除模型列表缓存并重新获取 |
+| `POST /v1/responses` | Responses API 风格的文本、多轮、工具、JSON／SSE 请求 |
+| `POST /v1/chat/completions` | Chat Completions API 风格的文本、工具、JSON／SSE 请求 |
+| `GET /v1/responses/{id}` | 读取本地保存的已完成回复 |
+| `DELETE /v1/responses/{id}` | 删除本地保存的回复 |
 
-除了 `/healthz`，其餘端點都需要：
+除了 `/healthz`，其余端点都需要：
 
 ```text
-Authorization: Bearer <本機 API 金鑰>
+Authorization: Bearer <本地 API 密钥>
 ```
 
-最小請求例：
+最小请求例：
 
 ```json
 {
@@ -187,30 +168,23 @@ Authorization: Bearer <本機 API 金鑰>
 }
 ```
 
-完整規格請參考 [openapi.json](openapi.json)。實作邊界與模型驗收結果見
-[模型適配驗證](docs/model-verification.md) 和 [客戶端相容性](docs/client-compatibility.md)。
+完整规范请参考 [openapi.json](openapi.json)。实现边界与模型验收结果见 [模型适配验证](docs/model-verification.md) 和 [客户端兼容性](docs/client-compatibility.md)。
 
-## 帳號與本機資料
+## 账号与本地数据
 
-登入流程使用隔離的專用瀏覽器設定檔，不讀取被鎖定的日常瀏覽器 Cookie
-資料庫，也不要求安裝擴充功能。你仍須親自完成帳密、驗證碼或其他網站要求
-的步驟；程式不代做驗證。
+登录流程使用隔离的专用浏览器配置文件，不读取被锁定的日常浏览器 Cookie 数据库，也不要求安装扩展功能。你仍须亲自完成账号密码、验证码或其他网站要求的步骤；程序不代做验证。
 
-Windows 預設資料夾是 `%LOCALAPPDATA%\\webgpt-api`；其他系統使用
-`$XDG_STATE_HOME/webgpt-api`，也可以用 `WEBGPT_HOME` 覆寫。可能出現的檔案
-包括 `api.key`、`session.json`、`conversations.sqlite` 和
-`browser-profile`。它們包含本機金鑰、登入狀態或對話內容，請勿提交到 Git、
-貼到 issue，或分享給他人。
+Windows 默认文件夹是 `%LOCALAPPDATA%\\webgpt-api`；其他系统使用 `$XDG_STATE_HOME/webgpt-api`，也可以用 `WEBGPT_HOME` 覆盖。可能出现的文件包括 `api.key`、`session.json`、`conversations.sqlite` 和 `browser-profile`。它们包含本地密钥、登录状态或对话内容，请勿提交到 Git、贴到 issue，或分享给他人。
 
 ## 重要限制
 
-- ChatGPT 網頁協定不是穩定的公開 API；網站變更可能需要更新本專案。
-- 這個服務只允許 loopback，不提供公網部署、帳號輪替或付費後端備援。
-- `usage` 不假造 token 計量；未實作或不安全的欄位會拒絕，部分常見用戶端欄位則只為相容性收下而不套用。
-- 附件目前只接受 base64 data URL；PNG、文字檔與單頁 PDF 已驗收，其他格式仍要依環境逐一確認。
-- 實際可用模型、權限、登入與跨平台行為取決於你的帳號、瀏覽器與網站狀態。
+- ChatGPT 网页协议不是稳定的公开 API；网站变更可能需要更新本项目。
+- 这个服务只允许 loopback，不提供公网部署、账号轮替或付费后端备援。
+- `usage` 不伪造 token 计量；未实现或不安全的字段会拒绝，部分常见客户端字段则只为兼容性收下而不应用。
+- 附件目前只接受 base64 data URL；PNG、文本文件与单页 PDF 已验收，其他格式仍要依环境逐一确认。
+- 实际可用模型、权限、登录与跨平台行为取决于你的账号、浏览器与网站状态。
 
-## 開發與驗證
+## 开发与验证
 
 ```powershell
 npm ci --ignore-scripts
@@ -219,16 +193,14 @@ npm test
 npm run check
 ```
 
-單元測試不使用帳號或個人憑證。`npm run test:live` 及其衍生腳本會使用你
-已登入的帳號並消耗實際使用額度，只應在本機手動執行；不要放進公開 CI。
+单元测试不使用账号或个人凭证。`npm run test:live` 及其衍生脚本会使用你已登录的账号并消耗实际使用额度，只应在本地手动执行；不要放进公开 CI。
 
-更多內容：
+更多内容：
 
-- [架構說明](docs/architecture.md)
-- [發布前驗收](docs/release-readiness.md)
-- [開發與貢獻](CONTRIBUTING.md)
+- [架构说明](docs/architecture.md)
+- [发布前验收](docs/release-readiness.md)
+- [开发与贡献](CONTRIBUTING.md)
 
-## 授權
+## 授权
 
-本專案採 MIT License。第三方依賴與授權見
-[`vendor/THIRD_PARTY_NOTICES.txt`](vendor/THIRD_PARTY_NOTICES.txt)。
+本项目采用 MIT License。第三方依赖与授权见 [`vendor/THIRD_PARTY_NOTICES.txt`](vendor/THIRD_PARTY_NOTICES.txt)。
