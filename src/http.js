@@ -6,6 +6,8 @@ import { validateRequest } from "./engine.js";
 import { readFileSync } from "node:fs";
 import { controlToken } from "./launcher.js";
 
+const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+
 function authorized(header, key) {
   const expected = Buffer.from(`Bearer ${key}`);
   const supplied = Buffer.from(typeof header === "string" ? header : "");
@@ -50,7 +52,6 @@ export function createLocalServer({ engine, key, selection, control = {} }) {
     const abort = new AbortController();
     active.add(abort);
     res.on("close", () => { if (!res.writableFinished) abort.abort(); });
-    req.on("aborted", () => abort.abort());
     let started;
     let chat = false;
     let sequence = 0;
@@ -114,7 +115,7 @@ export function createLocalServer({ engine, key, selection, control = {} }) {
       }
       const url = new URL(req.url, "http://127.0.0.1");
       if (url.pathname === "/healthz" && req.method === "GET") {
-        json(200, { status: "ok", service: "webgpt-api", version: "0.1.0", scope: "local", live_transport_verified: engine.transport?.verified === true });
+        json(200, { status: "ok", service: "webgpt-api", version: VERSION, scope: "local", live_transport_verified: engine.transport?.verified === true });
         return;
       }
       if (!authorized(req.headers.authorization, key)) throw new Fault(401, "invalid_api_key", "A valid local API key is required.");

@@ -4,7 +4,9 @@ import { join } from "node:path";
 import { initialize, dataDirectory, importSession, readSession } from "./settings.js";
 import { Fault, publicError } from "./errors.js";
 
-const help = `webgpt-api 0.1.0 — ulfmaw
+const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+
+const help = `webgpt-api ${VERSION} — ulfmaw
 
   node src/cli.js init                 Create private local settings
   node src/cli.js launch               Open the local one-click control panel
@@ -30,7 +32,7 @@ The dedicated browser exits after two idle seconds. First login is interactive.
 async function main(args) {
   const command = args.shift() ?? "help";
   if (["help", "--help", "-h"].includes(command)) { console.log(help); return; }
-  if (["--version", "-v"].includes(command)) { console.log("0.1.0"); return; }
+  if (["--version", "-v"].includes(command)) { console.log(VERSION); return; }
   const directory = dataDirectory();
   if (["launch", "serve", "doctor", "setup", "login"].includes(command)) {
     const { configureNetwork } = await import("./network.js"); configureNetwork();
