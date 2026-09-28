@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>webgpt-api · ulfmaw</title>
+<style>
+:root{color-scheme:dark;font:16px/1.6 system-ui,sans-serif;background:#10141c;color:#e9edf5}body{max-width:760px;margin:7vh auto;padding:24px}header{display:flex;align-items:baseline;justify-content:space-between}h1{letter-spacing:-1px}small,.muted{color:#aab5c8}section{background:#1b2230;border:1px solid #313b50;border-radius:16px;padding:24px;margin:20px 0}h2{font-size:18px;margin-top:0}select,button{font:inherit;border-radius:8px;border:1px solid #485777;padding:10px 14px;color:inherit;background:#252f42}select{width:100%;margin:12px 0}button{cursor:pointer;margin:5px 6px 5px 0}button.primary{background:#356ce0;border-color:#5784ed}button:disabled{opacity:.45;cursor:wait}code{overflow-wrap:anywhere;color:#b7d1ff}#notice{white-space:pre-wrap;overflow-wrap:anywhere}#detail{white-space:pre-wrap}.error{color:#ffbdad}.success{color:#9fe5b6}
+</style></head><body>
+<header><h1>webgpt-api</h1><small>ulfmaw · 本機控制台</small></header>
+<p class="muted">API 跟隨這裡保存的選擇；登入或刷新時同步帳號清單，不自動升級或降級。</p>
+<section><h2 id="status">正在連線…</h2><p id="detail"></p><button id="login">登入／更新登入</button><button id="check">測試目前模型</button></section>
+<section><h2>模型</h2><p>目前設定：<strong id="selected">讀取中</strong></p><label for="models">切換模型</label><select id="models" aria-label="選擇模型"></select>
+<p id="choice-detail" class="muted" aria-live="polite"></p>
+<button id="select" class="primary">測試並套用</button><button id="refresh">刷新清單</button>
+<p class="muted">預設為 ChatGPT 一般對話的原生 Auto。推理強度已經在模型選項裡，不用另外填。「帳號已提供・尚未實測」只表示清單已讀到，不代表要重登。測試成功才會保存，失敗就留著原來的設定。</p>
+<p id="catalog-time" class="muted"></p><p id="notice" role="status" aria-live="polite"></p></section>
+<section><h2>接到別的程式</h2><code id="url"></code>
+<ol>
+<li>按「複製 API 網址」，貼到程式的 API 位址。結尾要有 <code>/v1</code>。</li>
+<li>按「複製 API Key」，貼到 API Key。這不是 ChatGPT 密碼。</li>
+<li>模型填 <code>auto</code> 或不填，就跟著這一頁的選擇。程式若要選協定，選 OpenAI 相容。</li>
+</ol>
+<p class="muted">金鑰只給這台電腦用，不會因為切換模型而改變。</p>
+<button id="copy-url">複製 API 網址</button><button id="copy-key">複製 API Key</button></section>
+<button id="stop">停止服務</button><script src="/v1/control-ui.js"></script></body></html>

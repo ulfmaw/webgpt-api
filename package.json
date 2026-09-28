@@ -1,0 +1,42 @@
+{
+  "name": "webgpt-api",
+  "version": "0.1.0",
+  "description": "Run your own ChatGPT Chat account as a local OpenAI-compatible API",
+  "author": "ulfmaw",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "bin": {
+    "webgpt-api": "src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js serve",
+    "test": "node --test tests/*.test.js",
+    "check": "node scripts/check.js",
+    "build:vendor": "node scripts/build-vendor.js",
+    "test:ui": "node scripts/ui-browser-check.js",
+    "test:live": "node scripts/sdk-live-check.js",
+    "test:live:control": "node scripts/live-control-check.js",
+    "test:live:models": "node scripts/model-live-check.js",
+    "test:live:all": "node scripts/live-gate.js",
+    "test:first-run": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/first-run-check.ps1",
+    "build:release": "node scripts/build-release.js",
+    "test:release": "node scripts/release-check.js"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "eventsource-parser": "4.1.1"
+  },
+  "devDependencies": {
+    "esbuild-wasm": "0.28.2",
+    "fflate": "0.8.3",
+    "openai": "7.23.0",
+    "pdf-lib": "1.17.1",
+    "playwright-core": "1.63.0",
+    "pngjs": "7.0.0"
+  }
+}

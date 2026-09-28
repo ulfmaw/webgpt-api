@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>webgpt-api · ulfmaw</title>
+<style>
+body{font:17px/1.7 system-ui;background:#10151c;color:#e7edf5;max-width:760px;margin:8vh auto;padding:24px}h1{font-size:32px;margin-bottom:0}small{color:#aab5c5}section{background:#1c2531;border:1px solid #334356;border-radius:14px;padding:24px;margin:24px 0}button{font:inherit;padding:9px 16px;margin:8px 8px 0 0;border:0;border-radius:8px;cursor:pointer;background:#d4e8ff;color:#13263b}button:disabled{opacity:.45;cursor:wait}code{overflow-wrap:anywhere}ol{padding-left:1.2em}li{margin:8px 0}#status{font-weight:600}#detail{white-space:pre-wrap;color:#c4cfdc}#notice{min-height:2em;color:#a6dbbf}
+</style>
+<h1>webgpt-api</h1><small>ulfmaw · 本機連線</small>
+<section><div id="status" role="status">讀取狀態…</div><p id="detail"></p>
+<button id="login">登入／更新登入</button><button id="check">重新測試生成</button>
+<p><small>首次只需在新視窗正常登入 ChatGPT。程式會自動偵測並接手，不需要關視窗、搬 Cookie 或按完成。每次生成測試會送出一則「Reply only: OK」。驗證失敗不會自動重開登入視窗。</small></p></section>
+<section><h2>接到別的程式，照這四步</h2>
+<ol>
+<li>上面要先顯示生成測試通過。還沒登入就按「登入／更新登入」，在跳出的視窗登入 ChatGPT，登好不要自己關。</li>
+<li>按「複製網址」，貼到程式裡的 API 位址、Base URL 或接口地址。結尾要有 <code>/v1</code>。</li>
+<li>按「複製本機 API Key」，貼到 API Key。這不是 ChatGPT 密碼，也不要貼到網路上。</li>
+<li>模型填 <code>auto</code>，就跟著控制頁的選擇。程式若要選協定，選 OpenAI 相容。一般聊天用 Chat Completions，Codex 這類用 Responses，位址都是同一個。金鑰只給這台電腦用。</li>
+</ol>
+<small>API 位址</small><p><code id="url">http://127.0.0.1:17841/v1</code></p>
+<button id="copy-url">複製網址</button><button id="copy-key">複製本機 API Key</button></section>
+<p id="notice" role="status"></p><button id="stop">停止服務</button>
+<script src="/launcher-ui.js"></script></html>

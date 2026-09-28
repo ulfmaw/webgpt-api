@@ -1,0 +1,156 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "webgpt-api",
+    "version": "0.1.0",
+    "description": "Local API by ulfmaw. Text, client-executed functions and schema-validated JSON outputs. Website transport is experimental; not full official API parity. Function proposals are buffered and validated before emitting events.",
+    "contact": { "name": "ulfmaw" },
+    "license": { "name": "MIT", "identifier": "MIT" }
+  },
+  "servers": [{ "url": "http://127.0.0.1:17841" }],
+  "security": [{ "localKey": [] }],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "health", "security": [],
+        "responses": { "200": { "description": "Local process health only; not proof of remote generation access." } }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "operationId": "models",
+        "responses": {
+          "200": {
+            "description": "Account-advertised models.",
+            "content": { "application/json": { "schema": {
+              "type": "object", "required": ["object", "data"],
+              "properties": {
+                "object": { "const": "list" },
+                "data": { "type": "array", "items": { "type": "object", "required": ["id", "object"], "properties": { "id": { "type": "string" }, "object": { "const": "model" } } } }
+              }
+            } } }
+          },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/v1/models/refresh": {
+      "post": {
+        "operationId": "refreshModels",
+        "responses": { "200": { "description": "Cleared discovery cache and unavailability records." }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/v1/responses": {
+      "post": {
+        "operationId": "createResponse",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResponseRequest" } } } },
+        "responses": {
+          "200": {
+            "description": "JSON response or typed SSE lifecycle. Streaming failures emit response.failed, never response.completed.",
+            "content": {
+              "application/json": { "schema": { "type": "object", "required": ["id", "object", "status", "model", "output"], "properties": { "id": { "type": "string" }, "object": { "const": "response" }, "status": { "const": "completed" }, "model": { "type": "string" }, "output": { "type": "array", "items": { "type": "object" } } } } },
+              "text/event-stream": { "schema": { "type": "string" } }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/v1/responses/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^resp_[a-f0-9-]{36}$" } }],
+      "get": {
+        "operationId": "retrieveResponse",
+        "description": "Retrieve a completed locally stored response. Query options and stream replay are not supported.",
+        "responses": { "200": { "description": "Original completed response with stable output IDs and creation time." }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "default": { "$ref": "#/components/responses/Error" } }
+      },
+      "delete": {
+        "operationId": "deleteResponse",
+        "responses": { "200": { "description": "Deleted only this local response. Continuations depending on it subsequently fail with missing history.", "content": { "application/json": { "schema": { "type": "object", "required": ["id", "object", "deleted"], "properties": { "id": { "type": "string" }, "object": { "const": "response.deleted" }, "deleted": { "const": true } } } } } }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "operationId": "createChatCompletion",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "additionalProperties": false, "required": ["messages"],
+          "properties": {
+            "messages": { "type": "array", "minItems": 1, "items": { "oneOf": [{ "$ref": "#/components/schemas/Message" }, { "$ref": "#/components/schemas/ChatToolCallMessage" }, { "$ref": "#/components/schemas/ChatToolResult" }] } },
+            "model": { "type": "string", "minLength": 1, "maxLength": 160, "default": "auto" },
+            "stream": { "type": "boolean", "default": false },
+            "instructions": { "type": "string" },
+            "tools": { "type": "array", "maxItems": 128, "items": { "type": "object", "required": ["type", "function"], "properties": { "type": { "const": "function" }, "function": { "$ref": "#/components/schemas/FunctionDefinition" } } } },
+            "tool_choice": { "oneOf": [{ "enum": ["auto", "none", "required"] }, { "type": "object", "required": ["type", "function"], "properties": { "type": { "const": "function" }, "function": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } } } }] },
+            "parallel_tool_calls": { "type": "boolean" },
+            "response_format": { "type": "object", "required": ["type"], "properties": { "type": { "enum": ["text", "json_object", "json_schema"] }, "json_schema": { "$ref": "#/components/schemas/SchemaFormat" } } },
+            "reasoning": { "$ref": "#/components/schemas/Reasoning" },
+            "include": { "$ref": "#/components/schemas/Include" },
+            "prompt_cache_key": { "type": "string", "maxLength": 512 },
+            "client_metadata": { "type": "object", "description": "Optional metadata; not forwarded or persisted; bounded to 16 KiB serialized." }
+          }
+        } } } },
+        "responses": {
+          "200": { "description": "Text chat completion or SSE chunks ending in [DONE].", "content": { "application/json": { "schema": { "type": "object" } }, "text/event-stream": { "schema": { "type": "string" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "localKey": { "type": "http", "scheme": "bearer", "description": "Local key from webgpt-api key; never the website credential." } },
+    "responses": {
+      "Error": { "description": "Structured local error. Missing history: 409; oversized context: 413; unavailable credentials/verification: 401 or 503.", "content": { "application/json": { "schema": { "type": "object", "required": ["error"], "properties": { "error": { "type": "object", "required": ["code", "message", "type"], "properties": { "code": { "type": "string" }, "message": { "type": "string" }, "type": { "const": "webgpt_error" } } } } } } } }
+    },
+    "schemas": {
+      "InlineData": { "type": "string", "pattern": "^data:(image/(png|jpeg|webp|gif)|application/pdf|text/(plain|csv));base64,[A-Za-z0-9+/]+={0,2}$", "description": "Canonical base64 data URL only; no remote fetches or file IDs. Maximum 5 MiB decoded per file, 8 MiB and 10 attachments across the conversation. PNG, plain text and single-page PDF tested live; other formats need verification." },
+      "InlineImage": { "allOf": [{ "$ref": "#/components/schemas/InlineData" }, { "type": "string", "pattern": "^data:image/" }] },
+      "InlineFile": { "type": "object", "required": ["filename", "file_data"], "properties": { "filename": { "type": "string", "minLength": 1, "maxLength": 100, "description": "Plain filename without paths or control characters." }, "file_data": { "$ref": "#/components/schemas/InlineData" } } },
+      "ContentPart": { "oneOf": [
+        { "type": "object", "required": ["type", "text"], "properties": { "type": { "enum": ["input_text", "output_text", "text"] }, "text": { "type": "string" } } },
+        { "type": "object", "required": ["type", "image_url"], "properties": { "type": { "const": "input_image" }, "image_url": { "$ref": "#/components/schemas/InlineImage" }, "detail": { "const": "auto" } } },
+        { "type": "object", "required": ["type", "image_url"], "properties": { "type": { "const": "image_url" }, "image_url": { "type": "object", "required": ["url"], "properties": { "url": { "$ref": "#/components/schemas/InlineImage" }, "detail": { "const": "auto" } } } } },
+        { "allOf": [{ "$ref": "#/components/schemas/InlineFile" }, { "type": "object", "required": ["type"], "properties": { "type": { "const": "input_file" } } }] },
+        { "type": "object", "required": ["type", "file"], "properties": { "type": { "const": "file" }, "file": { "$ref": "#/components/schemas/InlineFile" } } }
+      ], "description": "Attachments are accepted only on user messages. Image parts require an image MIME type." },
+      "Message": {
+        "type": "object", "required": ["role", "content"],
+        "not": { "required": ["tool_calls"] },
+        "if": { "properties": { "role": { "not": { "const": "user" } } } },
+        "then": { "properties": { "content": { "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "object", "required": ["type", "text"], "properties": { "type": { "enum": ["input_text", "output_text", "text"] }, "text": { "type": "string" } } } }] } } },
+        "properties": {
+          "role": { "enum": ["user", "assistant", "system", "developer"] },
+          "content": { "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "$ref": "#/components/schemas/ContentPart" } }
+          ] }
+        }
+      },
+      "FunctionDefinition": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,128}$" }, "description": { "type": "string" }, "parameters": { "type": ["object", "boolean"], "description": "JSON Schema; draft-2020-12 by default or explicit draft-07. Local refs only; 64 KiB maximum." }, "strict": { "type": "boolean", "description": "Outputs are always locally validated; no native constrained decoding guarantee." } } },
+      "FunctionCall": { "type": "object", "required": ["type", "call_id", "name", "arguments"], "properties": { "type": { "const": "function_call" }, "call_id": { "type": "string", "minLength": 1, "maxLength": 200 }, "name": { "type": "string" }, "arguments": { "type": "string", "description": "Serialized JSON arguments." } } },
+      "FunctionResult": { "type": "object", "required": ["type", "call_id", "output"], "properties": { "type": { "const": "function_call_output" }, "call_id": { "type": "string", "minLength": 1, "maxLength": 200 }, "output": { "type": "string" } } },
+      "ChatToolCallMessage": { "type": "object", "required": ["role", "tool_calls"], "properties": { "role": { "const": "assistant" }, "content": { "type": ["string", "null"] }, "tool_calls": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["id", "type", "function"], "properties": { "id": { "type": "string" }, "type": { "const": "function" }, "function": { "type": "object", "required": ["name", "arguments"], "properties": { "name": { "type": "string" }, "arguments": { "type": "string" } } } } } } } },
+      "ChatToolResult": { "type": "object", "required": ["role", "tool_call_id", "content"], "properties": { "role": { "const": "tool" }, "tool_call_id": { "type": "string", "minLength": 1, "maxLength": 200 }, "content": { "type": "string" } } },
+      "SchemaFormat": { "type": "object", "required": ["schema"], "properties": { "name": { "type": "string" }, "schema": { "type": ["object", "boolean"] }, "strict": { "type": "boolean" }, "description": { "type": "string" } } },
+      "Reasoning": { "type": "object", "additionalProperties": false, "properties": { "summary": { "const": "auto" } }, "description": "Optional summary only; effort is rejected; no reasoning output is guaranteed." },
+      "Include": { "type": "array", "items": { "const": "reasoning.encrypted_content" }, "description": "Optional include; no encrypted reasoning is fabricated." },
+      "ResponseRequest": {
+        "type": "object", "additionalProperties": false, "required": ["input"],
+        "properties": {
+          "input": { "oneOf": [{ "type": "string" }, { "type": "array", "minItems": 1, "items": { "oneOf": [{ "$ref": "#/components/schemas/Message" }, { "$ref": "#/components/schemas/FunctionCall" }, { "$ref": "#/components/schemas/FunctionResult" }] } }] },
+          "model": { "type": "string", "minLength": 1, "maxLength": 160, "default": "auto" },
+          "stream": { "type": "boolean", "default": false },
+          "store": { "type": "boolean", "default": true, "description": "Persist the completed conversation locally." },
+          "previous_response_id": { "type": ["string", "null"], "pattern": "^resp_[a-f0-9-]{36}$" },
+          "instructions": { "type": "string", "description": "Applies only to this turn; not inherited by previous_response_id." },
+          "tools": { "type": "array", "maxItems": 128, "items": { "allOf": [{ "$ref": "#/components/schemas/FunctionDefinition" }, { "type": "object", "required": ["type"], "properties": { "type": { "const": "function" } } }] } },
+          "tool_choice": { "oneOf": [{ "enum": ["auto", "none", "required"] }, { "type": "object", "required": ["type", "name"], "properties": { "type": { "const": "function" }, "name": { "type": "string" } } }] },
+          "parallel_tool_calls": { "type": "boolean" },
+          "text": { "type": "object", "additionalProperties": false, "properties": { "format": { "type": "object", "required": ["type"], "properties": { "type": { "enum": ["text", "json_object", "json_schema"] }, "name": { "type": "string" }, "schema": { "type": ["object", "boolean"] }, "strict": { "type": "boolean" } } } } },
+          "reasoning": { "$ref": "#/components/schemas/Reasoning" },
+          "include": { "$ref": "#/components/schemas/Include" },
+          "prompt_cache_key": { "type": "string", "maxLength": 512 },
+          "client_metadata": { "type": "object", "description": "Optional metadata; not forwarded or persisted; bounded to 16 KiB serialized." }
+        }
+      }
+    }
+  }
+}
