@@ -12,7 +12,7 @@ try {
       const child = spawn("codex", ["exec", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check",
         "--sandbox", "read-only", "--json", "-c", 'model="auto"', "-c", 'model_provider="local_smoke"',
         "-c", `model_providers.local_smoke={name="webgpt",base_url="${address}/v1",env_key="WEBGPT_SMOKE_KEY",wire_api="responses",requires_openai_auth=false,supports_websockets=false,request_max_retries=0,stream_max_retries=0}`,
-        "-c", "features.apps=false", "-c", "features.remote_plugin=false", "-c", 'web_search="disabled"',
+        "-c", "features.apps=false", "-c", "features.plugins=false", "-c", "features.remote_plugin=false", "-c", "features.multi_agent=false", "-c", 'web_search="disabled"',
         "Reply only WEBGPT-SMOKE-OK. Do not use tools."], {
         windowsHide: true, env: { ...process.env, WEBGPT_SMOKE_KEY: key }, stdio: ["ignore", "pipe", "pipe"],
       });
