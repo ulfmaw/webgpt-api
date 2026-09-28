@@ -1,7 +1,7 @@
 {
   "name": "webgpt-api",
   "version": "0.1.0",
-  "description": "Run your own ChatGPT Chat account as a local OpenAI-compatible API",
+  "description": "Local adapter for using your own ChatGPT Chat account through an OpenAI-compatible API",
   "author": "ulfmaw",
   "license": "MIT",
   "private": true,

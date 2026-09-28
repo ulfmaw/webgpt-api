@@ -1,23 +1,35 @@
 # webgpt-api
 
-把你自己的 ChatGPT Chat 轉成本機的 OpenAI 相容 API。
+把 ChatGPT 網頁版的 Chat 模式，接成一個只在本機監聽的 OpenAI 相容 API。
 
-`webgpt-api` 會使用你本人登入的 ChatGPT 帳號，在自己的電腦上開一個只接受
-loopback 連線的服務。Codex CLI、Claude Code、OpenCode，以及其他支援
-OpenAI 相容端點的工具，可以繼續使用既有工作流程；請求最後仍由你的 Chat
-帳號處理，不需要另買一份 API 額度。
+`webgpt-api` 是一個本機轉接層：它接收既有 OpenAI 介面的請求，使用你本人
+登入的 ChatGPT 帳號完成生成，再把結果轉回 `Responses` 或 `Chat Completions`
+格式。這讓 Codex CLI、Claude Code、OpenCode 等工具可以沿用原本的客戶端
+設定，同時使用 Chat 網頁端實際提供給該帳號的模型與權限。
 
-這不是官方 OpenAI API 的替代品，也不是遠端代理服務。它是由 `ulfmaw`
-維護的本機轉接層，會直接面對 ChatGPT 網頁協定的變動。
+請求路徑很直接：
 
-## 特色
+```text
+OpenAI 相容客戶端
+        │  127.0.0.1 + 本機 API 金鑰
+        ▼
+webgpt-api gateway
+        │  隔離的專用瀏覽器工作階段
+        ▼
+ChatGPT 網頁版 Chat
+```
 
-- 本機 `127.0.0.1` API，不開放公網、不建立隧道，也不接管日常瀏覽器。
-- 提供 `/v1/responses` 與 `/v1/chat/completions`，可供常見 OpenAI 相容工具使用。
-- 透過控制頁查看帳號回報的 Chat 模型與選擇狀態，`auto` 會保留 Chat 網頁自己的 Auto 選擇。
-- 支援文字、多輪上下文、JSON／SSE、函式工具協定，以及 base64 圖片、文字檔與單頁 PDF 輸入。
-- 憑證、API 金鑰、對話資料與專用瀏覽器設定檔都留在本機私人資料夾。
-- Windows 提供 `start.cmd`；缺少指定 Node.js 版本時，啟動器可下載並校驗免安裝執行檔。
+它不是官方 OpenAI API、遠端代理或代管服務。服務只綁定 loopback；登入狀態、
+本機金鑰、對話資料與專用瀏覽器設定檔留在你的電腦上。ChatGPT 網頁協定不是
+穩定的公開 API，因此可用模型、登入狀態與部分功能會隨帳號、瀏覽器和網站
+變更而變化。
+
+## 設計取向
+
+- **保持 Chat 的原生選擇。** 模型清單來自帳號自己的 Chat 選單；`auto` 會原樣交給上游，不自行假定某個固定模型。
+- **本機邊界清楚。** 生成 API 只接受本機連線與本機金鑰，不開放公網、不建立隧道，也不接管日常瀏覽器。
+- **失敗不被掩蓋。** 網站回覆未完成、模型被替換、登入或協定驗證失敗時，閘道會回報錯誤，不把半截內容當成成功，也不靜默改用另一個模型。
+- **相容性有明確範圍。** 目前涵蓋文字、多輪上下文、JSON／SSE、函式工具協定，以及部分附件輸入；詳細邊界與未驗證項目列在文件中。
 
 ## 快速開始（Windows）
 
