@@ -212,7 +212,11 @@ async function main(args) {
 }
 
 main(process.argv.slice(2)).catch(error => {
-  const safe = publicError(error);
-  console.error(`webgpt-api: ${safe.code}: ${safe.message}`);
+  if (error instanceof Fault) {
+    const safe = publicError(error);
+    console.error(`webgpt-api: ${safe.code}: ${safe.message}`);
+  } else {
+    console.error("webgpt-api fatal error:", error);
+  }
   process.exitCode = 1;
 });
