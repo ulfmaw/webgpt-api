@@ -5,9 +5,17 @@ const bad=message=>{throw new Fault(400,"invalid_tools",message);};
 const namePattern=/^[A-Za-z0-9_.-]{1,128}$/;
 export function normalizeTools(body,chat=false){
   if(body.tools!==undefined&&!Array.isArray(body.tools))bad("tools must be an array.");
-  if((body.tools?.length??0)>128)bad("At most 128 functions are supported.");
+  const flattenedTools = [];
+  const extractTools = (list) => {
+    for (const tool of list) {
+      if (tool?.type === "function") flattenedTools.push(tool);
+      else if (tool?.type === "namespace" && Array.isArray(tool.tools)) extractTools(tool.tools);
+    }
+  };
+  extractTools(body.tools ?? []);
+  if(flattenedTools.length>128)bad("At most 128 functions are supported.");
   const seen=new Set();
-  const tools=(body.tools??[]).filter(tool => tool?.type === "function").map(tool=>{
+  const tools=flattenedTools.map(tool=>{
     const f=chat?tool.function:tool;
     if(!f||!namePattern.test(f.name)||seen.has(f.name))bad("Function names must be valid and unique.");seen.add(f.name);
     if(f.description!==undefined&&typeof f.description!=="string")bad("Tool descriptions must be strings.");
@@ -77,3 +85,4 @@ export function decodeToolReply(text,protocol,format){
   }
   return{text:value.reply,items:[]};
 }
+
