@@ -46,6 +46,52 @@ ChatGPT 網頁版 Chat
 服務只綁定本機。`node src/cli.js key` 可以在命令列取得本機 API 金鑰；這個
 金鑰不是 ChatGPT 憑證，也不會被轉送給 ChatGPT。
 
+## 一般使用者怎麼接入
+
+啟動服務並完成登入後，從控制頁複製 API 位址和本機金鑰。對支援 OpenAI 相容
+API 的工具，填入：
+
+```text
+Base URL: http://127.0.0.1:17841/v1
+API Key:  控制頁顯示的本機 API 金鑰
+Model:    auto
+```
+
+API 金鑰只用來保護你電腦上的 loopback 服務，不是 ChatGPT 的登入憑證。最小
+的 HTTP 請求如下：
+
+```powershell
+$key = (node src/cli.js key).Trim()
+$body = @{ model = "auto"; input = "你好"; store = $false } | ConvertTo-Json
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:17841/v1/responses" `
+  -Method Post `
+  -Headers @{ Authorization = "Bearer $key" } `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+也可以直接使用官方 OpenAI SDK，只替換 Base URL 和 API Key：
+
+```javascript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "http://127.0.0.1:17841/v1",
+  apiKey: process.env.WEBGPT_API_KEY,
+});
+
+const response = await client.responses.create({
+  model: "auto",
+  input: "你好",
+});
+
+console.log(response.output_text);
+```
+
+Codex CLI、Claude Code、OpenCode 等工具則使用同一組 Base URL、API Key 和
+模型設定；各工具自己的工具執行、權限與沙箱政策仍然照原本規則運作。
+
 ## 命令列啟動
 
 需要 Node.js 24.14 或更新版本：
