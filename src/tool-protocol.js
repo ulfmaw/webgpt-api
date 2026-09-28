@@ -17,11 +17,11 @@ export function normalizeTools(body,chat=false){
   const seen=new Set();
   const tools=flattenedTools.map(tool=>{
     const f=chat?tool.function:tool;
-    if(!f||!namePattern.test(f.name)||seen.has(f.name))bad("Function names must be valid and unique.");seen.add(f.name);
+    if(!f||!namePattern.test(f.name))bad("Function names must be valid and unique. Failed on: " + f?.name); if (seen.has(f.name)) return null; seen.add(f.name);
     if(f.description!==undefined&&typeof f.description!=="string")bad("Tool descriptions must be strings.");
     const parameters=f.parameters??{type:"object",properties:{}};checkSchema(parameters);
     return{name:f.name,description:f.description??"",parameters};
-  });
+  }).filter(t=>t!==null);
   let choice=body.tool_choice??"auto";
   if(choice&&typeof choice==="object"){
     const name=chat?choice.function?.name:choice.name;
@@ -74,7 +74,7 @@ export function decodeToolReply(text,protocol,format){
       const tool=protocol.tools.find(t=>t.name===action.name);
       if(!tool||!action.args||typeof action.args!=="object"||Array.isArray(action.args)||(typeof protocol.choice==="object"&&protocol.choice.name!==action.name)||!matchesSchema(action.args,tool.parameters))fail();
       return{type:"function_call",id:`fc_${randomUUID()}`,call_id:`call_${randomUUID()}`,name:action.name,arguments:JSON.stringify(action.args),status:"completed"};
-    });
+    }).filter(t=>t!==null);
     return{text:"",items};
   }
   if(protocol.choice==="required"||typeof protocol.choice==="object"||typeof value.reply!=="string"||!value.reply.trim())fail();
