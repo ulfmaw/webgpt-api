@@ -6,7 +6,7 @@ const root = resolve(import.meta.dirname, "..");
 const version = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
 if (!/^\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?$/.test(version)) throw Error("Invalid release version");
 // Explicit whitelist: never package a user's runtime, tests, caches or credentials.
-const paths = ["README.md", "LICENSE", "openapi.json", "package.json", "start.cmd", "scripts/start.ps1", "docs/architecture.md", "docs/client-compatibility.md", "docs/model-verification.md", "docs/release-readiness.md"];
+const paths = ["README.md", "LICENSE", "openapi.json", "package.json", "start.cmd", "webgpt.cmd", "scripts/start.ps1", "scripts/run-client.ps1", "docs/architecture.md", "docs/client-compatibility.md", "docs/model-verification.md", "docs/release-readiness.md"];
 function include(directory) {
   for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
     const name = directory + "/" + entry.name;

@@ -10,6 +10,9 @@ const help = `webgpt-api 0.1.0 — ulfmaw
   node src/cli.js launch               Open the local one-click control panel
   node src/cli.js setup                First-run login and connection check
   node src/cli.js login                Refresh login in a separate browser window
+  node src/cli.js connect codex        Install a managed Codex profile
+  node src/cli.js shell                Open a terminal with API settings ready
+  node src/cli.js run -- TOOL [ARGS]   Run any OpenAI-compatible CLI automatically
   node src/cli.js serve [--port N]     Start loopback API (default 17841)
   node src/cli.js key                  Show the LOCAL API key
   node src/cli.js session import FILE  Import session JSON from a local file
@@ -87,6 +90,23 @@ async function main(args) {
   if (command === "init" && !args.length) {
     const { keyPath } = initialize(directory);
     console.log(`Local settings ready. API key file: ${keyPath}`);
+    return;
+  }
+  if (command === "connect" && args.length === 1 && args[0] === "codex") {
+    const { installCodexProfile, CODEX_PROFILE } = await import("./integrations.js");
+    const result = installCodexProfile({ nodePath: process.execPath });
+    console.log(`${result.changed ? "Codex profile installed" : "Codex profile already ready"}: ${CODEX_PROFILE}`);
+    return;
+  }
+  if (command === "shell" && !args.length) {
+    const { openClientShell } = await import("./integrations.js");
+    process.exitCode = await openClientShell();
+    return;
+  }
+  if (command === "run") {
+    const clientArgs = args[0] === "--" ? args.slice(1) : args;
+    const { runClient } = await import("./integrations.js");
+    process.exitCode = await runClient(clientArgs);
     return;
   }
   if (command === "key" && !args.length) { console.log(initialize(directory).key); return; }

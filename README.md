@@ -1,6 +1,6 @@
 # webgpt-api
 
-把 ChatGPT 網頁版的 Chat 模式，接成一個只在本機監聽的 OpenAI 相容 API。
+把 ChatGPT 網頁版的 Chat 模式，包裝成一個只在本機監聽的 OpenAI 相容 API。
 
 `webgpt-api` 是一個本機轉接層：它接收既有 OpenAI 介面的請求，使用你本人
 登入的 ChatGPT 帳號完成生成，再把結果轉回 `Responses` 或 `Chat Completions`
@@ -36,7 +36,8 @@ ChatGPT 網頁版 Chat
 1. 下載或 clone 這個 repository。
 2. 雙擊 `start.cmd`。
 3. 在專用登入視窗完成你自己的 ChatGPT 登入與必要驗證。
-4. 從控制頁複製 API 位址與本機金鑰，填入你的 OpenAI 相容工具。
+4. 在任何支援自訂 OpenAI Base URL 的工具裡，填入下方三個欄位即可。
+5. 命令列工具也可以直接雙擊 `webgpt.cmd 工具名`，省掉複製貼上。
 
 預設網址：
 
@@ -46,7 +47,41 @@ ChatGPT 網頁版 Chat
 服務只綁定本機。`node src/cli.js key` 可以在命令列取得本機 API 金鑰；這個
 金鑰不是 ChatGPT 憑證，也不會被轉送給 ChatGPT。
 
+## 標準 OpenAI 相容接入
+
+這個專案對使用者就是一個本機 OpenAI API。啟動並登入後，在工具的
+`OpenAI API`、`Custom Provider` 或 `OpenAI-compatible` 設定中填入：
+
+```text
+Base URL: http://127.0.0.1:17841/v1
+API Key:  控制頁的「本機 API Key」
+Model:    auto
+```
+
+不需要填 ChatGPT 帳號密碼，也不需要申請或購買 OpenAI API key。這個 Base URL
+同時支援 Responses API 與 Chat Completions API；工具選哪一種協定，照工具原本
+的預設即可。模型填 `auto` 會使用帳號目前可用的 Chat 模型。
+
+只要工具允許自訂 Base URL，它就能直接接入；若工具把 API 網址硬編碼成官方
+服務、完全不支援自訂 provider，就不能只靠 API 端改變它的限制。
+
 ## 一般使用者怎麼接入
+
+最省事的方式是不碰 Key，也不改任何第三方設定檔：
+
+```bat
+webgpt.cmd codex
+webgpt.cmd opencode
+webgpt.cmd 你的工具名
+```
+
+這個啟動器只把設定傳給該次啟動的工具，不寫入全域環境變數。它會提供
+`OPENAI_BASE_URL`、`OPENAI_API_BASE`、`OPENAI_API_KEY`、`OPENAI_MODEL` 及
+`WEBGPT_API_*` 變數；工具本身仍須支援 OpenAI 相容 API。Codex 會自動建立並
+使用 `webgpt-api` profile，不需要使用者手動編輯 `config.toml`。
+
+若只雙擊 `webgpt.cmd` 而不帶工具名，會開一個已準備好的終端；在裡面啟動的
+相容工具會繼承同一組設定。
 
 啟動服務並完成登入後，從控制頁複製 API 位址和本機金鑰。對支援 OpenAI 相容
 API 的工具，填入：

@@ -8,14 +8,21 @@ body{font:17px/1.7 system-ui;background:#10151c;color:#e7edf5;max-width:760px;ma
 <section><div id="status" role="status">讀取狀態…</div><p id="detail"></p>
 <button id="login">登入／更新登入</button><button id="check">重新測試生成</button>
 <p><small>首次只需在新視窗正常登入 ChatGPT。程式會自動偵測並接手，不需要關視窗、搬 Cookie 或按完成。每次生成測試會送出一則「Reply only: OK」。驗證失敗不會自動重開登入視窗。</small></p></section>
-<section><h2>接到別的程式，照這四步</h2>
+<section><h2>標準 OpenAI API 設定</h2>
 <ol>
 <li>上面要先顯示生成測試通過。還沒登入就按「登入／更新登入」，在跳出的視窗登入 ChatGPT，登好不要自己關。</li>
-<li>按「複製網址」，貼到程式裡的 API 位址、Base URL 或接口地址。結尾要有 <code>/v1</code>。</li>
-<li>按「複製本機 API Key」，貼到 API Key。這不是 ChatGPT 密碼，也不要貼到網路上。</li>
-<li>模型填 <code>auto</code>，就跟著控制頁的選擇。程式若要選協定，選 OpenAI 相容。一般聊天用 Chat Completions，Codex 這類用 Responses，位址都是同一個。金鑰只給這台電腦用。</li>
+<li>在工具裡選 <code>OpenAI</code>、<code>Custom Provider</code> 或 <code>OpenAI-compatible</code>。</li>
+<li>Base URL 填下方網址，API Key 貼本機 Key，Model 填 <code>auto</code>。這不是 ChatGPT 密碼，也不要貼到網路上。</li>
 </ol>
+<p><small>這是標準 OpenAI 相容 API；一般聊天用 Chat Completions，Codex 這類工具用 Responses，網址相同。</small></p>
 <small>API 位址</small><p><code id="url">http://127.0.0.1:17841/v1</code></p>
 <button id="copy-url">複製網址</button><button id="copy-key">複製本機 API Key</button></section>
+<section><h2>不用填設定的方式</h2>
+<ol>
+<li>在這個專案資料夾雙擊 <code>webgpt.cmd</code>，會開一個已自動帶好本機 API 設定的終端。</li>
+<li>要直接開工具，使用 <code>webgpt.cmd 工具名</code>，例如 <code>webgpt.cmd codex</code> 或 <code>webgpt.cmd opencode</code>。</li>
+<li>Codex 會自動使用專用 profile；其他支援 OpenAI 相容環境變數的命令列工具會自動收到網址、Key 和 <code>auto</code> 模型。</li>
+</ol>
+<small>桌面版工具若不讀取環境變數，才使用上方的複製按鈕；服務不會修改第三方程式的帳號或設定檔。</small></section>
 <p id="notice" role="status"></p><button id="stop">停止服務</button>
 <script src="/launcher-ui.js"></script></html>

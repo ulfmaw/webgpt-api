@@ -46,6 +46,9 @@ test("double-click entry starts management UI and verifies portable runtime inte
   assert.ok(script.includes("Get-FileHash"));
   assert.ok(script.includes("https://nodejs.org/dist/v24.14.0/"));
   assert.ok(script.indexOf("Runtime download checksum mismatch") < script.indexOf("Move-Item"));
+  const wrapper = readFileSync(join(root, "webgpt.cmd"), "utf8");
+  assert.match(wrapper, /scripts\\run-client\.ps1/);
+  assert.ok(readFileSync(join(root, "scripts", "run-client.ps1"), "utf8").includes("@args"));
 });
 
 test("portable bootstrap refuses an altered cached executable without replacing it", { skip: process.platform !== "win32" }, () => {

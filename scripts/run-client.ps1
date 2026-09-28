@@ -1,13 +1,7 @@
-param(
-  [switch]$CheckRuntime,
-  [switch]$PortableRuntime
-)
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath (Split-Path -Parent $PSScriptRoot)
+
 function Get-TaskSha256([string]$Path) {
-  # Windows PowerShell installations used by double-click launchers do not
-  # always expose Get-FileHash. Keep the documented path first, then use the
-  # inbox certutil command without weakening verification.
   if (Get-Command Get-FileHash -ErrorAction SilentlyContinue) {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
   }
@@ -18,16 +12,16 @@ function Get-TaskSha256([string]$Path) {
   }
   throw 'No SHA-256 verifier is available.'
 }
-$taskNode = Get-Command node -ErrorAction SilentlyContinue
-$taskNodePath = $null
-if ($taskNode -and -not $PortableRuntime) {
-  $taskVersion = [version]((& $taskNode.Source --version) -replace '^v', '')
-  if ($taskVersion -ge [version]'24.14.0') { $taskNodePath = $taskNode.Source }
-}
-if (-not $taskNodePath) {
-  # Portable official runtime; no installer, admin rights, or PATH edits.
+
+function Get-TaskNodePath {
+  $taskNode = Get-Command node -ErrorAction SilentlyContinue
+  if ($taskNode) {
+    $taskVersion = [version]((& $taskNode.Source --version) -replace '^v', '')
+    if ($taskVersion -ge [version]'24.14.0') { return $taskNode.Source }
+  }
+
   $taskArch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64' -or $env:PROCESSOR_ARCHITEW6432 -eq 'ARM64') { 'arm64' } else { 'x64' }
-  $taskHash = if ($taskArch -eq 'arm64') { '8c5fd45a4a1fd3cc4a6f07da8803b05194108906cb6fb7d962448a12582a5922' } else { '63c259c81e5d472b5f11c8d506070130cb04a1ecf84b80377a34ed6ec9048088' }
+  $taskHash = if ($taskArch -eq 'arm64') { '8c5fd45a4a1fd3cc4a6f07da8803b05194108906cb6fb7d962448a12582a592' } else { '63c259c81e5d472b5f11c8d506070130cb04a1ecf84b80377a34ed6ec9048088' }
   $taskRuntime = Join-Path $env:LOCALAPPDATA "webgpt-api\runtime\node-v24.14.0-$taskArch"
   New-Item -ItemType Directory -Path $taskRuntime -Force | Out-Null
   $taskNodePath = Join-Path $taskRuntime 'node.exe'
@@ -46,11 +40,13 @@ if (-not $taskNodePath) {
       if (Test-Path -LiteralPath $taskDownload) { Remove-Item -LiteralPath $taskDownload }
     }
   }
+  return $taskNodePath
 }
-if ($CheckRuntime) { & $taskNodePath --version; exit $LASTEXITCODE }
-# Keep the normal Codex path zero-configuration. This writes only a managed
-# profile under CODEX_HOME and never edits the user's base config.toml.
-& $taskNodePath src/cli.js connect codex
-if ($LASTEXITCODE -ne 0) { Write-Warning 'Codex profile was not installed; the local API can still be used by other clients.' }
-& $taskNodePath src/cli.js launch
+
+$taskNodePath = Get-TaskNodePath
+if ($args -and $args.Count -gt 0) {
+  & $taskNodePath src/cli.js run -- @args
+} else {
+  & $taskNodePath src/cli.js shell
+}
 exit $LASTEXITCODE
